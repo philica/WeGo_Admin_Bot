@@ -34,6 +34,8 @@ console.log('Bot has been started ...')
 
 
 //scenes 
+
+//create trip scene 
 const createTripScene = new WizardScene(
     'createTripScene',
     (ctx) => {
@@ -167,7 +169,7 @@ const createTripScene = new WizardScene(
         else {
             ctx.answerCbQuery()
             ctx.wizard.state.trip.vehicleType = ctx.update.callback_query.data
-            ctx.reply(`Great , Next input price ` )
+            ctx.reply(`Great , Next input price `)
             return ctx.wizard.next()
         }
     },
@@ -187,20 +189,20 @@ const createTripScene = new WizardScene(
         Price : ${ctx.wizard.state.trip.price}
 
        `
-       bot.telegram.sendMessage(ctx.chat.id, message, {
-        reply_markup: {
-            inline_keyboard: [
-                [
-                    { text: 'Cancel', callback_data: 'cancel' },
-                    { text: 'Confirm', callback_data: 'confirm' },
+        bot.telegram.sendMessage(ctx.chat.id, message, {
+            reply_markup: {
+                inline_keyboard: [
+                    [
+                        { text: 'Cancel', callback_data: 'cancel' },
+                        { text: 'Confirm', callback_data: 'confirm' },
 
-                ],
-            ]
-        }
-    })
+                    ],
+                ]
+            }
+        })
         return ctx.wizard.next()
     },
-    (ctx) =>{
+    (ctx) => {
         if (ctx.updateType != 'callback_query') {
             if (ctx.update.message.text) {
                 if (ctx.update.message.text == '/cancel') {
@@ -243,7 +245,7 @@ const createTripScene = new WizardScene(
                 });
             return ctx.scene.leave()
         }
-        else{
+        else {
             ctx.reply('Process terminated \n\nplease use the /start command to start using our service\n\n Join our telegram channel @WeGo_Ride ');
             return ctx.scene.leave();
         }
@@ -251,14 +253,126 @@ const createTripScene = new WizardScene(
 
 )
 
+const manageTripScene = new WizardScene(
+    'manageTripScene',
+    (ctx) => {
+        // return a keyboard 
+        Trip.find({})
+            .then((trips) => {
+                const tripList = trips.map((trip) => {
+                    return (
+                        {
+                            tripId: trip._id,
+                            destination: trip.destination,
+                            date: trip.date,
+                            departureTime: trip.departureTime,
+                            vehicleType: trip.vehicleType,
+                            price: trip.price
+
+                        })
+                })
+
+                ctx.wizard.state.booking = {}
+                ctx.wizard.state.booking.tripList = tripList
+
+                console.log(tripList)
+
+                tripList.forEach((trip) => {
+
+                    const message = `Trip
+                 
+                 Destination : ${trip.destination}
+                 Date : ${trip.date}
+                 Time : ${trip.departureTime}
+                 Vehicle Type: ${trip.vehicleType}
+                 Price : ${trip.price}
+                 `
+                    bot.telegram.sendMessage(ctx.chat.id, message, {
+                        reply_markup: {
+                            inline_keyboard: [
+                                [
+
+                                    { text: 'Delete Trip', callback_data: `Delete${trip.tripId}` },
+                                    { text: 'View users', callback_data: `View${trip.tripId}` }
+
+                                ],
+                            ]
+                        }
+                    })
+                })
+            })
+
+
+
+        return ctx.wizard.next()
+    },
+    (ctx)=>{
+        if (ctx.updateType != 'callback_query') {
+            if (ctx.update.message.text) {
+                if (ctx.update.message.text == '/cancel') {
+                    //leave scene
+                    ctx.reply('Process terminated \n\nplease use the /start command to start using our service ');
+                    return ctx.scene.leave();
+                }
+            }
+
+            ctx.reply('Please enter the correct Information 👍');
+
+            const tripList = ctx.wizard.state.booking.tripList = tripList
+            tripList.forEach((trip) => {
+
+                const message = `Trip
+             
+             Destination : ${trip.destination}
+             Date : ${trip.date}
+             Time : ${trip.departureTime}
+             Vehicle Type: ${trip.vehicleType}
+             Price : ${trip.price}
+             `
+                bot.telegram.sendMessage(ctx.chat.id, message, {
+                    reply_markup: {
+                        inline_keyboard: [
+                            [
+
+                                { text: 'Delete Trip', callback_data: `Delete${trip.tripId}` },
+                                { text: 'View users', callback_data: `View${trip.tripId}` }
+
+                            ],
+                        ]
+                    }
+                })
+            })
+
+            return
+        }
+        else if(ctx.update.callback_query.data.startsWith('D')){
+            ctx.answerCbQuery()
+            ctx.reply('trip succesfully deleted')
+            return ctx.scene.leave();
+        }
+        else{
+            ctx.answerCbQuery()
+            ctx.reply('Loding users to view bookings')
+            return ctx.scene.leave();
+        }
+    }
+)
+
 //scenes
 
 const stage = new Stage()
 stage.register(createTripScene)
+stage.register(manageTripScene)
+
+
 bot.use(stage.middleware())
 
 bot.command('createTrip', (ctx) => {
     ctx.scene.enter('createTripScene')
+})
+
+bot.command('manageTrip', (ctx) => {
+    ctx.scene.enter('manageTripScene')
 })
 
 bot.start((ctx) => {

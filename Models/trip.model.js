@@ -20,6 +20,12 @@ const tripSchema = new mongoose.Schema({
   vehicleType: {
     type: String,
     required: true
+  },
+  isDeleted:{
+    type:Boolean,
+    required: true,
+    default: false
+
   }
 });
 
